@@ -106,6 +106,7 @@ public class Analisador {
         int cont = 0;
         String linha = "";
         boolean coment = false;
+        boolean aspas = false;
         ArrayList<Token> listaTokens;
         while (br.ready()) {
             listaTokens = new ArrayList<Token>();
@@ -113,33 +114,28 @@ public class Analisador {
             linha = br.readLine();
             Token token = null;
             String tok = "";
+            String palavra="",ultimap="";
             String[] pal = linha.split(" ");//separa a linha em palavras
+            int k = 0;
             for (int j = 0; j < pal.length; j++) {//percorre o numero de palavras da linha
-                if (lexemas.containsKey(pal[j])) { //se alguma palavra tiver nos lexemas lá de cima
-                    token = new Token(lexemas.get(pal[j]), pal[j]); //é um token
-                    listaTokens.add(token);
-                } else { //se nao, trata caracter por caracter
-                    for (int i = 0; i < linha.length(); i++) {
-                        String p = linha;
-                        if (p.charAt(i) == '#') {
-                            coment = !coment;
-                        }
-                        if (!coment) {
-                            if (p.charAt(i) == '"') {
-                                tok = "";
-                                
-                                i++;
-                                while (p.charAt(i) != '"') {
-                                    tok += p.charAt(i);
-                                    i++;
-                                }
-                                token = new Token(lexemas.get("string"), tok);
-                                listaTokens.add(token);
-                                tok = "";
-                            }
-                        }
+                palavra=pal[j];
+                if (palavra.equals("#")) {
+                    coment = !coment;
+                    k += palavra.length() + j;
+                }
+                //System.out.println("Qual char: " + linha.charAt(k));
+                if (!coment) {
+                    
+                    if (lexemas.containsKey(palavra)) { //se alguma palavra tiver nos lexemas lá de cima
+                        token = new Token(lexemas.get(palavra), palavra); //é um token
+                        listaTokens.add(token);
+                        k += palavra.length() + j;
+
+                    }else{
+                        
                     }
                 }
+
             }
             tokens.put(cont, listaTokens);
             /*for (int i = 0; i < linha.length(); i++) {
