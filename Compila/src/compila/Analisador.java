@@ -1,5 +1,6 @@
 package compila;
 
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -18,7 +19,6 @@ import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jdk.nashorn.internal.codegen.types.NumericType;
-
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -30,332 +30,316 @@ import jdk.nashorn.internal.codegen.types.NumericType;
  */
 public class Analisador {
 
-    private Map<Integer, ArrayList<Token>> tokens;
-    private Map<String, String> lexemas;
-    private String path;
-    private Stack<String> pilha;
-    private boolean funcao;
+    private Map<Integer, ArrayList<Token>> linhaToken;
+    private Map<String, String> expres;
+    private String caminhoArquivo;
+    
 
-    Analisador(String nome) {
+    Analisador(String caminho) {
 
-        tokens = new LinkedHashMap<Integer, ArrayList<Token>>();
-        lexemas = new HashMap<String, String>();
-        pilha = new Stack<>();
-        this.path = nome;
-        preencheLexemas();
+        linhaToken = new LinkedHashMap<Integer, ArrayList<Token>>();
+        expres = new HashMap<String, String>();
+        this.caminhoArquivo = caminho;
+        expressoes();
 
     }
 
-    private void preencheLexemas() {
-//Aritmeticos
-        lexemas.put("+", "+");
-        lexemas.put("-", "-");
-        lexemas.put("*", "*");
-        lexemas.put(" x ", "*");
-        lexemas.put("/", "/");
-        lexemas.put(":", "/");
-        lexemas.put(".", ".");
-        lexemas.put(",", ".");
-        lexemas.put("[", "[");
-        lexemas.put("]", "]");
-        lexemas.put("(", "(");
-        lexemas.put(")", ")");
-
-//Comparativos
-        lexemas.put(">", "gt");
-        lexemas.put(">=", "gte");
-        lexemas.put("<", "lt");
-        lexemas.put("=<", "lte");
-        lexemas.put("==", "eq");
-        lexemas.put("!=", "neq");
-//Gerais
-        lexemas.put("=", "=");
-        lexemas.put("int", "int");
-        lexemas.put("float", "float");
-        lexemas.put("string", "string");
-        lexemas.put("var", "id");
-        lexemas.put("fun", "fun");
-        lexemas.put("vet", "vet");
-//Palavras-chave
-//Condicionais
-        lexemas.put("se", "cond");
-        lexemas.put("então", "initcond");
-        lexemas.put("senão", "altcond");
-        lexemas.put("fim-se", "endcond");
-        lexemas.put("e", "&&");
-        lexemas.put("ou", "||");
+    private void expressoes() {
+//Operações
+        expres.put("+", "+");
+        expres.put("-", "-");
+        expres.put("*", "*");
+        expres.put("x", "*");
+        expres.put("/", "/");
+        expres.put(":", "/");
+//tokens ou separadores?????        
+        expres.put("[", "[");
+        expres.put("]", "]");
+        expres.put("(", "(");
+        expres.put(")", ")");
+//Comparações
+        expres.put(">", "maior");
+        expres.put(">=", "maiorIgual");
+        expres.put("=>", "maiorIgual");
+        expres.put("<", "menor");
+        expres.put("=<", "menorIgual");
+        expres.put("<=", "menorIgual");
+        expres.put("==", "igual");
+        expres.put("!=", "diferente");
+        expres.put("e", "&&");
+        expres.put("ou", "||");
+//tipos
+        expres.put("=", "=");
+        expres.put("int", "int");
+        expres.put("float", "float");
+        expres.put("string", "string");
+        expres.put("var", "ident");
+        expres.put("fun", "funcao");
+        expres.put("vetor", "vetor");
+//Se
+        expres.put("se", "if");
+        expres.put("então", "inicIf");
+        //expres.put("entao", "inicIf");
+        expres.put("senão", "else");
+        expres.put("fim-se", "fechaIf");
 //Loops
-        lexemas.put("para", "forloop");
-        lexemas.put("de", "rng1forloop");
-        lexemas.put("até", "rng2forloop");
-        lexemas.put("faça", "initforloop");
-        lexemas.put("fim-para", "endforloop");
-        lexemas.put("enquanto", "whileloop");
-        lexemas.put("fim-enquanto", "endwhileloop");
+        expres.put("para", "for");
+        expres.put("de", "for1");
+        expres.put("até", "for2");
+        expres.put("faça", "inicFor");
+        expres.put("fim-para", "fechaFor");
+        expres.put("enquanto", "while");
+        expres.put("fim-enquanto", "fechaWhile");
     }
 
-    public BufferedReader carrega(String path) throws IOException {
+    public BufferedReader carregaArq(String caminho) throws IOException {
         BufferedReader reader;
         reader = new BufferedReader(new InputStreamReader(
-                new FileInputStream(path), "Cp1252"));
+                new FileInputStream(caminho), "UTF-8"));
         return reader;
     }
+    public BufferedReader carregaArq() throws FileNotFoundException, IOException {
+        FileInputStream file = new FileInputStream(caminhoArquivo);
+        InputStreamReader isr = new InputStreamReader(file, "UTF-8");
+        BufferedReader br = new BufferedReader(isr);
+// file.close();
+// isr.close();
+        return br;
+    }
 
-    public void analisar() throws IOException {
-        BufferedReader br = carrega(path);
-        int cont = 0;
+    public void analisar(){
+        try{
+            BufferedReader br = carregaArq(caminhoArquivo);
+            int contLinha = 0;
         String linha = "";
         boolean coment = false;
-        boolean aspas = false;
         ArrayList<Token> listaTokens;
         while (br.ready()) {
             listaTokens = new ArrayList<Token>();
-            cont++;
+            contLinha++;
             linha = br.readLine();
             Token token = null;
-            String tok = "";
-            String palavra="",ultimap="";
-            String[] pal = linha.split(" ");//separa a linha em palavras
-            int k = 0;
-            for (int j = 0; j < pal.length; j++) {//percorre o numero de palavras da linha
-                palavra=pal[j];
-                if (palavra.equals("#")) {
+            String valorToken = "";
+            for (int i = 0; i < linha.length(); i++) {
+                if (linha.charAt(i) == '#') {
                     coment = !coment;
-                    k += palavra.length() + j;
                 }
-                //System.out.println("Qual char: " + linha.charAt(k));
                 if (!coment) {
-                    
-                    if (lexemas.containsKey(palavra)) { //se alguma palavra tiver nos lexemas lá de cima
-                        token = new Token(lexemas.get(palavra), palavra); //é um token
+                    if (linha.charAt(i) == '"') {//se tiver aspas é string e nao pega aspas
+                        valorToken = "";
+                        i++;
+                        while (linha.charAt(i) != '"') {//enquanto nao houver outra aspas
+                            valorToken += linha.charAt(i); //poe tudo dentro no token
+                            i++;
+                        }
+                        token = new Token(expres.get("string"), valorToken); //tipo string
                         listaTokens.add(token);
-                        k += palavra.length() + j;
+                        //System.out.println("!!Cont: " + contLinha + "Token: " + valorToken);
+                        valorToken = "";//zera o valor que estava no token pois já adicionou
+                    } else if (Character.isLetter(linha.charAt(i)) && linha.charAt(i) != 'x') { //se for letra diferente de x
+                        valorToken += linha.charAt(i); //a string recebe a letra
+                        if (expres.containsKey(valorToken)) { //se for uma expressao conhecida
+                            if (linha.length() > (i + 1) && (linha.charAt(i + 1) == ' ' || linha.charAt(i + 1) == '.' 
+                                    || linha.charAt(i + 1) == ',' || linha.charAt(i + 1) == '(' 
+                                    || Character.isDigit(linha.charAt(i + 1)))) {//se a palavra tiver terminado ou vier um numero depois
+                                if (Character.isDigit(linha.charAt(i + 1))) {//se for numero
+                                    valorToken += linha.charAt(i + 1);//adiciona o numero a string
+                                    if (expres.containsKey(valorToken)) { //se for expressao conhecida adiciona
+                                        token = new Token(expres.get(valorToken), valorToken);
+                                        listaTokens.add(token);
+                                        //System.out.println("fun2  Cont: " + contLinha + " Token: " + valorToken);
+                                        valorToken = "";
+                                    } else if (linha.length() > (i + 2) && (linha.charAt(i + 2) == ' ' || linha.charAt(i + 2) == '(')) {
+                                        token = new Token(expres.get("var"), valorToken); //se nao for conhecida e termina no número adiciona uma nova
+                                        listaTokens.add(token);
+                                        //System.out.println("fun2  Cont: " + contLinha + " Token: " + valorToken);
+                                        valorToken = "";
+                                    } else { //se nao termina, incrementa a linha pra continuar a "palavra"
+                                        i++;
+                                    }
 
-                    }else{
-                        
+                                } else { //se nao for numero, entao adiciona a expressao conhecida
+                                    token = new Token(expres.get(valorToken), valorToken);
+                                    listaTokens.add(token);
+                                    //System.out.println("lex  Cont: " + contLinha + " Token: " + valorToken);
+                                    valorToken = "";
+                                }
+
+                            }
+                            if (linha.length() == i + 1) { //se termina naquele caracter
+                                if (expres.containsKey(valorToken)) { //se for expressao adiciona com o valor dela
+                                    token = new Token(expres.get(valorToken), valorToken);
+                                    listaTokens.add(token);
+                                    //System.out.println("lex2 Cont: " + contLinha + " Token: " + valorToken);
+                                    valorToken = "";
+                                } else { //se nao for adiciona uma nova
+                                    token = new Token(expres.get("var"), valorToken);
+                                    listaTokens.add(token);
+                                    //System.out.println("lex2 Cont: " + contLinha + " Token: " + valorToken);
+                                    valorToken = "";
+                                }
+
+                            }
+
+                        } else if (valorToken.equals("fim") && (i + 1) < linha.length() && linha.charAt(i + 1) == '-') {
+                            valorToken += linha.charAt(i + 1); //se a palavra chegando for fim
+                            //adiciona o hífen e incrementa o i para pegar o resto da expressao
+                            i++;
+                            //System.out.println("entrou "+i+ " palavra: " + t);
+                        } else {//se o caracter n tiver inscrito nos lexemas
+                            if (linha.length() > (i + 1) && (linha.charAt(i + 1) == ' ' || linha.charAt(i + 1) == '.' || linha.charAt(i + 1) == ',')) {
+                                token = new Token(expres.get("var"), valorToken); //se termina a palavra aqui adiciona nova
+                                listaTokens.add(token);
+                                //System.out.println("oioioivar Cont: " + contLinha + " Token: " + valorToken);
+                                valorToken = "";
+                            } else if (linha.length() > (i + 1) && (linha.charAt(i + 1) == '(' || linha.charAt(i + 1) == ')' || linha.charAt(i + 1) == '[' || linha.charAt(i + 1) == ']')) {
+                                //System.out.println("Vish " + linha.charAt(i) + linha.charAt(i + 1));
+                                String tt = ""; //se depois da palavra vem um colchete ou parenteses
+                                tt += linha.charAt(i); //precisa tratar
+                                token = new Token(expres.get("var"), valorToken);
+                                listaTokens.add(token);
+                                //System.out.println("vartt Cont: " + contLinha + " Token: " + valorToken);
+                            } else if (linha.length() > (i + 1) && (Character.isDigit(linha.charAt(i + 1)))) {//se depois vem numero
+                                if (linha.length() > (i + 2) && (linha.charAt(i + 2) == ' ' || linha.charAt(i + 2) == '.' || linha.charAt(i + 2) == '(' || linha.charAt(i + 2) == ')' || linha.charAt(i + 2) == ',')) {
+                                    valorToken += linha.charAt(i + 1); //se depois do numero termina                                    
+                                    token = new Token(expres.get("var"), valorToken); 
+                                    listaTokens.add(token);
+                                    //System.out.println("varnumero Cont: " + contLinha + " Token: " + valorToken);
+                                    i++;
+                                    valorToken = "";
+                                }
+                            }
+                            if (linha.length() == i + 1) { //se linha terminou
+                                //System.out.println(t);
+                                token = new Token(expres.get("var"), valorToken);
+                                //System.out.println("Cont: "+ count + "Token: " + t);
+                                listaTokens.add(token);
+                                //System.out.println("var2 Cont: " + contLinha + " Token: " + valorToken);
+                                valorToken = "";
+                            }
+                        }
+                        //t = "";
+                    } else if (linha.charAt(i) == '>' || linha.charAt(i) == '<' || linha.charAt(i) == '=') { //se for comparativo
+                        valorToken = "";
+                        valorToken += linha.charAt(i);
+
+                        if (linha.length() > (i + 1) && (linha.charAt(i + 1) == '>' || linha.charAt(i + 1) == '<' || linha.charAt(i + 1) == '=')) {
+                            String proximo = valorToken + linha.charAt(i + 1);//se tiver 2 caracteres comparativos
+                            if (expres.containsKey(proximo)) {
+                                valorToken = proximo;
+                            }
+                            i++;
+                        }
+                        listaTokens.add(new Token(expres.get(valorToken), valorToken));
+                        //System.out.println("1Cont: " + contLinha + "Token: " + valorToken);
+                        valorToken = "";
+                    } else if ((i + 1) < linha.length() && (linha.charAt(i) + "" + linha.charAt(i + 1)).equals("!=")) {
+                        valorToken = linha.charAt(i) + "" + linha.charAt(i + 1); //se a string for !=
+                        listaTokens.add(new Token(expres.get(valorToken), valorToken));
+                        //System.out.println("2Cont: " + contLinha + "Token: " + valorToken);
+                        i++;
+                        valorToken = "";
+                    } else if (Character.isDigit(linha.charAt(i))) {//se for um número
+                        //t = "";
+                        if (i > 0 && Character.isLetter(linha.charAt(i - 1)) && linha.charAt(i - 1) != 'x') {
+                            valorToken += linha.charAt(i);//se o caracter anterior for letra e nao for x
+                            if (expres.containsKey(valorToken)) {// se for expressao conhecida
+//t = "" + t + "";              
+                                if (linha.length() > (i + 1) && (linha.charAt(i + 1) == ' ' || linha.charAt(i + 1) == '.' || linha.charAt(i + 1) == ',')) {
+                                    token = new Token(expres.get(valorToken), valorToken);//se termina nesse caracter
+                                    listaTokens.add(token);
+                                    //System.out.println("3Cont: " + contLinha + "Token: " + valorToken);
+                                    valorToken = "";
+                                }
+
+                            }
+                        } else { //se nao for letra
+                            boolean inteiro = true;
+                            do {
+                                valorToken = valorToken + linha.charAt(i);
+                                i++;
+                                if (i < linha.length() && (linha.charAt(i) == '.' || linha.charAt(i) == ',') && (i + 1) < linha.length() && Character.isDigit(linha.charAt(i + 1)) && inteiro) {
+                                    valorToken = valorToken + linha.charAt(i);//se tiver ponto ou vírgula
+                                    i++;
+                                    inteiro = false; //nao é inteiro
+                                }
+                                if (i < linha.length() && !Character.isDigit(linha.charAt(i))) {
+                                    i--;
+                                    break;
+                                }
+                            } while (i < linha.length() && Character.isDigit(linha.charAt(i)));//enquanto for número
+                            if (inteiro) {
+                                token = new Token(expres.get("int"), valorToken);
+                            } else {
+                                token = new Token(expres.get("float"), valorToken);
+                            }
+                            listaTokens.add(token);
+                            //System.out.println("4Cont: " + contLinha + "Token: " + valorToken);
+                            valorToken = "";
+                        }
+                    } else if ((linha.charAt(i) == 'x' || linha.charAt(i) == ':' || linha.charAt(i) == '*' || linha.charAt(i) == '/' || linha.charAt(i) == '+' || linha.charAt(i) == '-')
+                            && i > 0 && (i + 1) < linha.length() && ((linha.charAt(i - 1) == ' ' && linha.charAt(i + 1) == ' ') || (Character.isDigit((linha.charAt(i - 1))) && Character.isDigit(linha.charAt(i + 1))) || (linha.charAt(i + 1) == '(' && (linha.charAt(i - 1) == ' ' || Character.isLetter(i - 1) || Character.isDigit(linha.charAt(i - 1)))))) {
+                        //confere se é algum tipo de operação x : / * etc
+                        valorToken = linha.charAt(i) + "";
+                        //System.err.println('"' + t + '"');
+                        listaTokens.add(new Token(expres.get(valorToken), valorToken));
+                        //System.out.println("5Cont: " + contLinha + "Token: " + valorToken);
+                        valorToken = "";
+                    }else if (Character.isLetter(linha.charAt(i)) && linha.charAt(i) == 'x') {//se for x
+                        if ((i + 1) < linha.length()) { //se nao for final da linha
+
+                            if (Character.isLetter(linha.charAt(i + 1))) {//se depois for letra
+                                valorToken += linha.charAt(i);//adiciona o x normalmente
+
+                            } else if (linha.charAt(i + 1) == ' ') {
+                                valorToken += linha.charAt(i);
+                                if (expres.containsKey(valorToken)) {
+
+                                    token = new Token(expres.get(valorToken), valorToken);
+                                    listaTokens.add(token);
+                                    //System.out.println("7Cont: " + contLinha + "Token: " + valorToken);
+                                    valorToken = "";
+                                }//se nao for conhecida???
+                            }
+                        } else if ((i + 1) == linha.length()) {//se for final da linha
+                            valorToken += linha.charAt(i);
+                            if (expres.containsKey(valorToken)) {
+
+                                token = new Token(expres.get(valorToken), valorToken);
+                                listaTokens.add(token);
+                                System.out.println("8Cont: " + contLinha + "Token: " + valorToken);
+                                valorToken = "";
+                            }//se nao for conhecida???
+                        }
+
+                    }else if (coment == false && !Character.isLetter(linha.charAt(i)) && !Character.isDigit(linha.charAt(i)) && linha.charAt(i) != ' ' && linha.charAt(i) != '.' && linha.charAt(i) != ',' && linha.charAt(i) != '#') {
+                        //System.out.println("22Cont: " + contLinha + " Caracter: " + linha.charAt(i));
+                        if (linha.charAt(i) == '(' || linha.charAt(i) == ')' || linha.charAt(i) == ']' || linha.charAt(i) == '[') {
+                            //tratar parenteses
+                            String tt = "";
+                            tt += linha.charAt(i);
+                            listaTokens.add(new Token(expres.get(tt), tt));
+                            //System.out.println("22Cont: " + contLinha + "Token: " + tt);
+                            valorToken = "";
+                        } else if (contLinha != 1 && i != 0) {
+                            listaTokens.add(new Token(expres.get("var"), valorToken));
+                            //System.out.println("22Cont: " + contLinha + "Token: " + valorToken);
+                            valorToken = "";
+                        }
                     }
                 }
-
             }
-            tokens.put(cont, listaTokens);
-            /*for (int i = 0; i < linha.length(); i++) {
-             if (s.charAt(i) == '#') {
-             comentario = !comentario;
-             }
-             if (!comentario) {
-             if (s.charAt(i) == '"') {
-             t = "";
-             i++;
-             while (s.charAt(i) != '"') {
-             t += s.charAt(i);
-             i++;
-             }
-             token = new Token(lexemas.get("string"), t);
-             listaTokens.add(token);
-             t = "";
-             } else if (Character.isLetter(s.charAt(i))) {
-             //t = "";
-             t += s.charAt(i);
-             //System.out.println("aiaiai "+ t);
-             if (lexemas.containsKey(t)) {// && !ValidaLetra(s.charAt(i + 1))) {
-             //t = "" + t + "";              
-             if (s.length() > (i + 1) && (s.charAt(i + 1) == ' ' || s.charAt(i + 1) == '.' || s.charAt(i + 1) == ',')) {
-             token = new Token(lexemas.get(t), t);
-             listaTokens.add(token);
-             t = "";
-             }
-
-             }
-             //t = "";
-             } else if (s.charAt(i) == '>' || s.charAt(i) == '<' || s.charAt(i) == '=') {
-             t = "";
-             t += s.charAt(i);
-             if (s.length() > (i + 1) && (s.charAt(i + 1) == '>' || s.charAt(i + 1) == '<' || s.charAt(i + 1) == '=')) {
-             String proximo = t + s.charAt(i + 1);
-             if (lexemas.containsKey(proximo)) {
-             t = proximo;
-             }
-             i++;
-             }
-             listaTokens.add(new Token(lexemas.get(t), t));
-             t = "";
-             } else if ((i + 1) < s.length() && (s.charAt(i) + "" + s.charAt(i + 1)).equals("!=")) {
-             t = s.charAt(i) + "" + s.charAt(i + 1);
-             listaTokens.add(new Token(lexemas.get(t), t));
-             i++;
-             } else if (Character.isDigit(s.charAt(i))) {
-             //t = "";
-             if (i > 0 && Character.isLetter(s.charAt(i - 1)) && s.charAt(i - 1) != 'x') {
-             t += s.charAt(i);
-             if (lexemas.containsKey(t)) {// && !ValidaLetra(s.charAt(i + 1))) {
-             //t = "" + t + "";              
-             if (s.length() > (i + 1) && (s.charAt(i + 1) == ' ' || s.charAt(i + 1) == '.' || s.charAt(i + 1) == ',')) {
-             token = new Token(lexemas.get(t), t);
-             listaTokens.add(token);
-             t = "";
-             }
-
-             }
-             /*while (Character.isDigit(s.charAt(i))) {
-             t += s.charAt(i);
-             i++;
-             }
-             i--;
-             //System.err.println(t);
-             token = new Token(lexemas.get("int"), t);
-             t = "";
-             listaTokens.add(token);
-             } else {
-             boolean inteiro = true;
-             do {
-             t = t + s.charAt(i);
-             i++;
-             if (i < s.length() && (s.charAt(i) == '.' || s.charAt(i) == ',') && (i + 1) < s.length() && Character.isDigit(s.charAt(i + 1)) && inteiro) {
-             t = t + s.charAt(i);
-             i++;
-             inteiro = false;
-             }
-             if (i < s.length() && !Character.isDigit(s.charAt(i))) {
-             i--;
-             break;
-             }
-             } while (i < s.length() && Character.isDigit(s.charAt(i)));
-             if (inteiro) {
-             token = new Token(lexemas.get("int"), t);
-             } else {
-             token = new Token(lexemas.get("float"), t);
-             }
-             listaTokens.add(token);
-             t = "";
-             }
-             } else if (s.charAt(i) == 'x' && i > 0 && (i + 1) < s.length() && ((s.charAt(i - 1) == ' ' && s.charAt(i + 1) == ' ') || (Character.isDigit((s.charAt(i - 1))) && Character.isDigit(s.charAt(i + 1))) || (s.charAt(i + 1) == '(' && (s.charAt(i - 1) == ' ' || Character.isDigit(s.charAt(i - 1)))))) {
-             t = " ";
-             t += s.charAt(i) + " ";
-             System.err.println('"' + t + '"');
-             listaTokens.add(new Token(lexemas.get(t), t));
-             } else if (s.length() == 1 && s.charAt(i) == 'x') {
-             t = " ";
-             t += s.charAt(i) + " ";
-             System.err.println('"' + t + '"');
-             listaTokens.add(new Token(lexemas.get(t), t));
-             // } else if (s.charAt(i) == '+' || s.charAt(i) == '*') {
-             // t = "";
-             // t += s.charAt(i);
-             // listaTokens.add(new Token(lexemas.get(t), t));
-             } else if (s.charAt(i) == '-' && (i + 1) < s.length() && t.equals("fim")) {
-             t = t + s.charAt(i);
-             } else if (s.charAt(i) == '.') {
-             t = "";
-             listaTokens.add(new Token(lexemas.get("."), "."));
-             } else if (s.charAt(i) == 'e' && i > 0 && (i + 1) < s.length() && !listaTokens.isEmpty() && listaTokens.get(listaTokens.size() - 1).getTipo() == ")") {
-             //i++;
-             while (s.charAt(i) == ' ' && i < s.length()) {
-             i++;
-             }
-             // i--;
-             // if (s.charAt(i + 1) == '(') {
-             if (s.charAt(i) == '(') {
-             // t = "";
-             listaTokens.add(new Token(lexemas.get("e"), "e"));
-             // } else if (!Character.isLetter(s.charAt(i + 1)) && !Character.isDigit(s.charAt(i + 1))) {
-             } else if (!Character.isLetter(s.charAt(i)) && !Character.isDigit(s.charAt(i))) {
-             t += 'e';
-             listaTokens.add(new Token(lexemas.get("var"), t));
-             t = "";
-             } else {
-             // t = "";
-             t += 'e';
-             if (s.charAt(i) == ' ') {
-             listaTokens.add(new Token(lexemas.get("var"), t));
-             t = "";
-             }
-             }
-             } else if (s.charAt(i) == '(' && !listaTokens.isEmpty() && listaTokens.get(listaTokens.size() - 1).getTipo() == lexemas.get("var")) {
-             t = "";
-             listaTokens.get(listaTokens.size() - 1).setTipo(lexemas.get("fun"));
-             listaTokens.add(new Token(lexemas.get("("), "("));
-             pilha.push("((");
-             funcao = true;
-             } else if (s.charAt(i) == ')' && pilha.size() >= 2 && pilha.get(pilha.size() - 2) == "((") {
-             t = "";
-             pilha.pop();
-             listaTokens.add(new Token(lexemas.get(")"), ")"));
-             funcao = true;
-             } else if (s.charAt(i) == ')' && pilha.size() == 1) {
-             t = "";
-             pilha.pop();
-             listaTokens.add(new Token(lexemas.get(")"), ")"));
-             funcao = false;
-             } else if (s.charAt(i) != 'e' && s.charAt(i) != 'x' && lexemas.containsKey(t)) {//possivelmente errado
-             if (s.charAt(i) == '(') {
-             t = "";
-             pilha.push("(");
-             listaTokens.add(new Token(lexemas.get("("), "("));
-             funcao = false;
-             } else if (s.charAt(i) == ')') {
-             t = "";
-             if (!pilha.isEmpty()) {
-             pilha.pop();
-             }
-             listaTokens.add(new Token(lexemas.get(")"), ")"));
-             } else if (s.charAt(i) == ',') {
-             if (!funcao) {
-             listaTokens.add(new Token(lexemas.get(t), ","));
-             t = "";
-             }
-             }
-             // else {
-             // listaTokens.add(new Token(lexemas.get(t), t));
-             // t = "";
-             // }
-             } else if ((Character.isLetter(s.charAt(i)) || Character.isDigit(s.charAt(i)))) {
-             t = t + s.charAt(i);
-             if (lexemas.containsKey(token) && ((s.length() > (i + 1) && (!Character.isLetter(s.charAt(i + 1)))) || (s.length() == (i + 1)))) {
-             listaTokens.add(new Token(lexemas.get(t), t));
-             t = "";
-             }
-             if (!t.equals(" ") && !t.equals("") && (i + 1) < s.length() && !Character.isLetter(s.charAt(i + 1)) && !Character.isDigit(s.charAt(i + 1)) && !t.equals("fim")) {
-             listaTokens.add(new Token(lexemas.get("var"), t));
-             t = "";
-             }
-             if (!token.equals(" ") && !token.equals("") && (i + 1) == s.length()) {
-             listaTokens.add(new Token(lexemas.get("var"), t));
-             t = "";
-             }
-             } else if (comentario == false && !Character.isLetter(s.charAt(i)) && !Character.isDigit(s.charAt(i)) && s.charAt(i) != ' ') {
-             if (count != 1 && i != 0) {
-             listaTokens.add(new Token(t, t));
-             t = "";
-             }
-             }
-             }
-             }
-             tokens.put(count, listaTokens);
-             }
-             br.close();
-             }
-             catch (IOException ex
-
-    
-             ) {
-             Logger.getLogger(AnalisadorLexico.class.getName()).log(Level.SEVERE, "Arquivo nao encontrado", ex);
-             }
-             for (Map.Entry<Integer, ArrayList<Token>> entrySet
-
-             : tokens.entrySet () 
-             ) {
-             Integer key = entrySet.getKey();
-             ArrayList<Token> value = entrySet.getValue();
-             System.out.print(key + " - ");
-             for (Token value1 : value) {
-             System.out.print(value1.toString() + " ");
-             }
-             System.out.println("");
-             }*/
+            linhaToken.put(contLinha, listaTokens);
         }
         br.close();
+        }catch (IOException ex) {
+            Logger.getLogger(Analisador.class.getName()).log(Level.SEVERE, "Arquivo nao encontrado", ex);
+        }
+        
+        
+
         for (Map.Entry<Integer, ArrayList<Token>> entrySet
-                : tokens.entrySet()) {
+                : linhaToken.entrySet()) {
             Integer key = entrySet.getKey();
             ArrayList<Token> value = entrySet.getValue();
             System.out.print(key + " - ");
