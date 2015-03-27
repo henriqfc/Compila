@@ -11,15 +11,9 @@ public class Compiladores {
     public static void main(String[] args) throws IOException {
         Scanner ler = new Scanner(System.in);
 
-        System.out.println("Informe o nome/caminho de arquivo texto:");
-        String caminho = ler.nextLine();
-        //try {
-            System.out.println("Conteúdo do arquivo texto:");
-            Analisador an = new Analisador(caminho);
+        //System.out.println("Informe o nome/caminho de arquivo texto:");
+        //String caminho = ler.nextLine();
+            Analisador an = new Analisador("abc.txt");
             an.analisar();
-//        } catch (IOException ex) {
-//            Logger.getLogger(Analisador.class.getName()).log(Level.SEVERE, null, ex);
-//        }
-
     }
 }

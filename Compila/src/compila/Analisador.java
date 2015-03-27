@@ -26,19 +26,19 @@ import jdk.nashorn.internal.codegen.types.NumericType;
  */
 /**
  *
- * @author Windows
+ * @author HenriqFC
  */
 public class Analisador {
 
-    private Map<Integer, ArrayList<Token>> linhaToken;
-    private Map<String, String> expres;
+    private Map<Integer, ArrayList<Token>> tokensLinha;
+    private Map<String, String> expressao;
     private String caminhoArquivo;
     
 
     Analisador(String caminho) {
 
-        linhaToken = new LinkedHashMap<Integer, ArrayList<Token>>();
-        expres = new HashMap<String, String>();
+        tokensLinha = new LinkedHashMap<Integer, ArrayList<Token>>();
+        expressao = new HashMap<String, String>();
         this.caminhoArquivo = caminho;
         expressoes();
 
@@ -46,70 +46,62 @@ public class Analisador {
 
     private void expressoes() {
 //Operações
-        expres.put("+", "+");
-        expres.put("-", "-");
-        expres.put("*", "*");
-        expres.put("x", "*");
-        expres.put("/", "/");
-        expres.put(":", "/");
+        expressao.put("+", "+");
+        expressao.put("-", "-");
+        expressao.put("*", "*");
+        expressao.put("x", "*");
+        expressao.put("/", "/");
+        expressao.put(":", "/");
 //tokens ou separadores?????        
-        expres.put("[", "[");
-        expres.put("]", "]");
-        expres.put("(", "(");
-        expres.put(")", ")");
+        expressao.put("[", "[");
+        expressao.put("]", "]");
+        expressao.put("(", "(");
+        expressao.put(")", ")");
 //Comparações
-        expres.put(">", "maior");
-        expres.put(">=", "maiorIgual");
-        expres.put("=>", "maiorIgual");
-        expres.put("<", "menor");
-        expres.put("=<", "menorIgual");
-        expres.put("<=", "menorIgual");
-        expres.put("==", "igual");
-        expres.put("!=", "diferente");
-        expres.put("e", "&&");
-        expres.put("ou", "||");
+        expressao.put(">", "maior");
+        expressao.put(">=", "maiorIgual");
+        expressao.put("=>", "maiorIgual");
+        expressao.put("<", "menor");
+        expressao.put("=<", "menorIgual");
+        expressao.put("<=", "menorIgual");
+        expressao.put("==", "igual");
+        expressao.put("!=", "diferente");
+        expressao.put("e", "&&");
+        expressao.put("ou", "||");
 //tipos
-        expres.put("=", "=");
-        expres.put("int", "int");
-        expres.put("float", "float");
-        expres.put("string", "string");
-        expres.put("var", "ident");
-        expres.put("fun", "funcao");
-        expres.put("vetor", "vetor");
+        expressao.put("=", "=");
+        expressao.put("int", "int");
+        expressao.put("float", "float");
+        expressao.put("string", "string");
+        expressao.put("var", "ident");
+        expressao.put("fun", "funcao");
+        expressao.put("vetor", "vetor");
 //Se
-        expres.put("se", "if");
-        expres.put("então", "inicIf");
+        expressao.put("se", "if");
+        expressao.put("então", "inicIf");
         //expres.put("entao", "inicIf");
-        expres.put("senão", "else");
-        expres.put("fim-se", "fechaIf");
+        expressao.put("senão", "else");
+        expressao.put("fim-se", "fechaIf");
 //Loops
-        expres.put("para", "for");
-        expres.put("de", "for1");
-        expres.put("até", "for2");
-        expres.put("faça", "inicFor");
-        expres.put("fim-para", "fechaFor");
-        expres.put("enquanto", "while");
-        expres.put("fim-enquanto", "fechaWhile");
+        expressao.put("para", "for");
+        expressao.put("de", "for1");
+        expressao.put("até", "for2");
+        expressao.put("faça", "inicFor");
+        expressao.put("fim-para", "fechaFor");
+        expressao.put("enquanto", "while");
+        expressao.put("fim-enquanto", "fechaWhile");
     }
 
-    public BufferedReader carregaArq(String caminho) throws IOException {
+    public BufferedReader carregaArquivo(String caminho) throws IOException {
         BufferedReader reader;
         reader = new BufferedReader(new InputStreamReader(
                 new FileInputStream(caminho), "UTF-8"));
         return reader;
     }
-    public BufferedReader carregaArq() throws FileNotFoundException, IOException {
-        FileInputStream file = new FileInputStream(caminhoArquivo);
-        InputStreamReader isr = new InputStreamReader(file, "UTF-8");
-        BufferedReader br = new BufferedReader(isr);
-// file.close();
-// isr.close();
-        return br;
-    }
 
     public void analisar(){
         try{
-            BufferedReader br = carregaArq(caminhoArquivo);
+            BufferedReader br = carregaArquivo(caminhoArquivo);
             int contLinha = 0;
         String linha = "";
         boolean coment = false;
@@ -132,25 +124,25 @@ public class Analisador {
                             valorToken += linha.charAt(i); //poe tudo dentro no token
                             i++;
                         }
-                        token = new Token(expres.get("string"), valorToken); //tipo string
+                        token = new Token(expressao.get("string"), valorToken); //tipo string
                         listaTokens.add(token);
                         //System.out.println("!!Cont: " + contLinha + "Token: " + valorToken);
                         valorToken = "";//zera o valor que estava no token pois já adicionou
                     } else if (Character.isLetter(linha.charAt(i)) && linha.charAt(i) != 'x') { //se for letra diferente de x
                         valorToken += linha.charAt(i); //a string recebe a letra
-                        if (expres.containsKey(valorToken)) { //se for uma expressao conhecida
+                        if (expressao.containsKey(valorToken)) { //se for uma expressao conhecida
                             if (linha.length() > (i + 1) && (linha.charAt(i + 1) == ' ' || linha.charAt(i + 1) == '.' 
                                     || linha.charAt(i + 1) == ',' || linha.charAt(i + 1) == '(' 
                                     || Character.isDigit(linha.charAt(i + 1)))) {//se a palavra tiver terminado ou vier um numero depois
                                 if (Character.isDigit(linha.charAt(i + 1))) {//se for numero
                                     valorToken += linha.charAt(i + 1);//adiciona o numero a string
-                                    if (expres.containsKey(valorToken)) { //se for expressao conhecida adiciona
-                                        token = new Token(expres.get(valorToken), valorToken);
+                                    if (expressao.containsKey(valorToken)) { //se for expressao conhecida adiciona
+                                        token = new Token(expressao.get(valorToken), valorToken);
                                         listaTokens.add(token);
                                         //System.out.println("fun2  Cont: " + contLinha + " Token: " + valorToken);
                                         valorToken = "";
                                     } else if (linha.length() > (i + 2) && (linha.charAt(i + 2) == ' ' || linha.charAt(i + 2) == '(')) {
-                                        token = new Token(expres.get("var"), valorToken); //se nao for conhecida e termina no número adiciona uma nova
+                                        token = new Token(expressao.get("var"), valorToken); //se nao for conhecida e termina no número adiciona uma nova
                                         listaTokens.add(token);
                                         //System.out.println("fun2  Cont: " + contLinha + " Token: " + valorToken);
                                         valorToken = "";
@@ -159,7 +151,7 @@ public class Analisador {
                                     }
 
                                 } else { //se nao for numero, entao adiciona a expressao conhecida
-                                    token = new Token(expres.get(valorToken), valorToken);
+                                    token = new Token(expressao.get(valorToken), valorToken);
                                     listaTokens.add(token);
                                     //System.out.println("lex  Cont: " + contLinha + " Token: " + valorToken);
                                     valorToken = "";
@@ -167,13 +159,13 @@ public class Analisador {
 
                             }
                             if (linha.length() == i + 1) { //se termina naquele caracter
-                                if (expres.containsKey(valorToken)) { //se for expressao adiciona com o valor dela
-                                    token = new Token(expres.get(valorToken), valorToken);
+                                if (expressao.containsKey(valorToken)) { //se for expressao adiciona com o valor dela
+                                    token = new Token(expressao.get(valorToken), valorToken);
                                     listaTokens.add(token);
                                     //System.out.println("lex2 Cont: " + contLinha + " Token: " + valorToken);
                                     valorToken = "";
                                 } else { //se nao for adiciona uma nova
-                                    token = new Token(expres.get("var"), valorToken);
+                                    token = new Token(expressao.get("var"), valorToken);
                                     listaTokens.add(token);
                                     //System.out.println("lex2 Cont: " + contLinha + " Token: " + valorToken);
                                     valorToken = "";
@@ -188,7 +180,7 @@ public class Analisador {
                             //System.out.println("entrou "+i+ " palavra: " + t);
                         } else {//se o caracter n tiver inscrito nos lexemas
                             if (linha.length() > (i + 1) && (linha.charAt(i + 1) == ' ' || linha.charAt(i + 1) == '.' || linha.charAt(i + 1) == ',')) {
-                                token = new Token(expres.get("var"), valorToken); //se termina a palavra aqui adiciona nova
+                                token = new Token(expressao.get("var"), valorToken); //se termina a palavra aqui adiciona nova
                                 listaTokens.add(token);
                                 //System.out.println("oioioivar Cont: " + contLinha + " Token: " + valorToken);
                                 valorToken = "";
@@ -196,13 +188,13 @@ public class Analisador {
                                 //System.out.println("Vish " + linha.charAt(i) + linha.charAt(i + 1));
                                 String tt = ""; //se depois da palavra vem um colchete ou parenteses
                                 tt += linha.charAt(i); //precisa tratar
-                                token = new Token(expres.get("var"), valorToken);
+                                token = new Token(expressao.get("var"), valorToken);
                                 listaTokens.add(token);
                                 //System.out.println("vartt Cont: " + contLinha + " Token: " + valorToken);
                             } else if (linha.length() > (i + 1) && (Character.isDigit(linha.charAt(i + 1)))) {//se depois vem numero
                                 if (linha.length() > (i + 2) && (linha.charAt(i + 2) == ' ' || linha.charAt(i + 2) == '.' || linha.charAt(i + 2) == '(' || linha.charAt(i + 2) == ')' || linha.charAt(i + 2) == ',')) {
                                     valorToken += linha.charAt(i + 1); //se depois do numero termina                                    
-                                    token = new Token(expres.get("var"), valorToken); 
+                                    token = new Token(expressao.get("var"), valorToken); 
                                     listaTokens.add(token);
                                     //System.out.println("varnumero Cont: " + contLinha + " Token: " + valorToken);
                                     i++;
@@ -211,7 +203,7 @@ public class Analisador {
                             }
                             if (linha.length() == i + 1) { //se linha terminou
                                 //System.out.println(t);
-                                token = new Token(expres.get("var"), valorToken);
+                                token = new Token(expressao.get("var"), valorToken);
                                 //System.out.println("Cont: "+ count + "Token: " + t);
                                 listaTokens.add(token);
                                 //System.out.println("var2 Cont: " + contLinha + " Token: " + valorToken);
@@ -225,17 +217,17 @@ public class Analisador {
 
                         if (linha.length() > (i + 1) && (linha.charAt(i + 1) == '>' || linha.charAt(i + 1) == '<' || linha.charAt(i + 1) == '=')) {
                             String proximo = valorToken + linha.charAt(i + 1);//se tiver 2 caracteres comparativos
-                            if (expres.containsKey(proximo)) {
+                            if (expressao.containsKey(proximo)) {
                                 valorToken = proximo;
                             }
                             i++;
                         }
-                        listaTokens.add(new Token(expres.get(valorToken), valorToken));
+                        listaTokens.add(new Token(expressao.get(valorToken), valorToken));
                         //System.out.println("1Cont: " + contLinha + "Token: " + valorToken);
                         valorToken = "";
                     } else if ((i + 1) < linha.length() && (linha.charAt(i) + "" + linha.charAt(i + 1)).equals("!=")) {
                         valorToken = linha.charAt(i) + "" + linha.charAt(i + 1); //se a string for !=
-                        listaTokens.add(new Token(expres.get(valorToken), valorToken));
+                        listaTokens.add(new Token(expressao.get(valorToken), valorToken));
                         //System.out.println("2Cont: " + contLinha + "Token: " + valorToken);
                         i++;
                         valorToken = "";
@@ -243,10 +235,10 @@ public class Analisador {
                         //t = "";
                         if (i > 0 && Character.isLetter(linha.charAt(i - 1)) && linha.charAt(i - 1) != 'x') {
                             valorToken += linha.charAt(i);//se o caracter anterior for letra e nao for x
-                            if (expres.containsKey(valorToken)) {// se for expressao conhecida
+                            if (expressao.containsKey(valorToken)) {// se for expressao conhecida
 //t = "" + t + "";              
                                 if (linha.length() > (i + 1) && (linha.charAt(i + 1) == ' ' || linha.charAt(i + 1) == '.' || linha.charAt(i + 1) == ',')) {
-                                    token = new Token(expres.get(valorToken), valorToken);//se termina nesse caracter
+                                    token = new Token(expressao.get(valorToken), valorToken);//se termina nesse caracter
                                     listaTokens.add(token);
                                     //System.out.println("3Cont: " + contLinha + "Token: " + valorToken);
                                     valorToken = "";
@@ -269,9 +261,9 @@ public class Analisador {
                                 }
                             } while (i < linha.length() && Character.isDigit(linha.charAt(i)));//enquanto for número
                             if (inteiro) {
-                                token = new Token(expres.get("int"), valorToken);
+                                token = new Token(expressao.get("int"), valorToken);
                             } else {
-                                token = new Token(expres.get("float"), valorToken);
+                                token = new Token(expressao.get("float"), valorToken);
                             }
                             listaTokens.add(token);
                             //System.out.println("4Cont: " + contLinha + "Token: " + valorToken);
@@ -282,7 +274,7 @@ public class Analisador {
                         //confere se é algum tipo de operação x : / * etc
                         valorToken = linha.charAt(i) + "";
                         //System.err.println('"' + t + '"');
-                        listaTokens.add(new Token(expres.get(valorToken), valorToken));
+                        listaTokens.add(new Token(expressao.get(valorToken), valorToken));
                         //System.out.println("5Cont: " + contLinha + "Token: " + valorToken);
                         valorToken = "";
                     }else if (Character.isLetter(linha.charAt(i)) && linha.charAt(i) == 'x') {//se for x
@@ -293,9 +285,9 @@ public class Analisador {
 
                             } else if (linha.charAt(i + 1) == ' ') {
                                 valorToken += linha.charAt(i);
-                                if (expres.containsKey(valorToken)) {
+                                if (expressao.containsKey(valorToken)) {
 
-                                    token = new Token(expres.get(valorToken), valorToken);
+                                    token = new Token(expressao.get(valorToken), valorToken);
                                     listaTokens.add(token);
                                     //System.out.println("7Cont: " + contLinha + "Token: " + valorToken);
                                     valorToken = "";
@@ -303,9 +295,9 @@ public class Analisador {
                             }
                         } else if ((i + 1) == linha.length()) {//se for final da linha
                             valorToken += linha.charAt(i);
-                            if (expres.containsKey(valorToken)) {
+                            if (expressao.containsKey(valorToken)) {
 
-                                token = new Token(expres.get(valorToken), valorToken);
+                                token = new Token(expressao.get(valorToken), valorToken);
                                 listaTokens.add(token);
                                 System.out.println("8Cont: " + contLinha + "Token: " + valorToken);
                                 valorToken = "";
@@ -318,35 +310,32 @@ public class Analisador {
                             //tratar parenteses
                             String tt = "";
                             tt += linha.charAt(i);
-                            listaTokens.add(new Token(expres.get(tt), tt));
+                            listaTokens.add(new Token(expressao.get(tt), tt));
                             //System.out.println("22Cont: " + contLinha + "Token: " + tt);
                             valorToken = "";
                         } else if (contLinha != 1 && i != 0) {
-                            listaTokens.add(new Token(expres.get("var"), valorToken));
+                            listaTokens.add(new Token(expressao.get("var"), valorToken));
                             //System.out.println("22Cont: " + contLinha + "Token: " + valorToken);
                             valorToken = "";
                         }
                     }
                 }
             }
-            linhaToken.put(contLinha, listaTokens);
+            tokensLinha.put(contLinha, listaTokens);
         }
         br.close();
         }catch (IOException ex) {
             Logger.getLogger(Analisador.class.getName()).log(Level.SEVERE, "Arquivo nao encontrado", ex);
         }
-        
-        
-
         for (Map.Entry<Integer, ArrayList<Token>> entrySet
-                : linhaToken.entrySet()) {
-            Integer key = entrySet.getKey();
+                : tokensLinha.entrySet()) {
+            //Integer key = entrySet.getKey();
             ArrayList<Token> value = entrySet.getValue();
-            System.out.print(key + " - ");
+            //System.out.print(key + " - ");
             for (Token value1 : value) {
-                System.out.print(value1.toString() + " ");
+                System.out.println(value1.getValor());
             }
-            System.out.println("");
+            //System.out.println("");
         }
     }
 }
