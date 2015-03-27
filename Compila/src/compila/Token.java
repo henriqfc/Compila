@@ -26,9 +26,5 @@ public class Token {
         this.valor = valor;
     }
 
-    @Override
-    public String toString() {
-        return "<" + tipo + "," + valor + ">";
-// return valor;;
-    }
+    
 }
